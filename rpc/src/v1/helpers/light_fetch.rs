@@ -203,8 +203,8 @@ impl LightFetch {
 	/// Helper for getting proved execution.
 	pub fn proved_read_only_execution(&self, req: CallRequest, num: Trailing<BlockNumber>) -> impl Future<Item = ExecutionResult, Error = Error> + Send {
 		const DEFAULT_GAS_PRICE: u64 = 21_000;
-		// (21000 G_transaction + 32000 G_create)
-		const START_GAS: u64 = 53_000;
+		// (21000 G_transaction + 32000 G_create + some marginal to allow a few operations)
+		const START_GAS: u64 = 60_000;
 
 		let (sync, on_demand, client) = (self.sync.clone(), self.on_demand.clone(), self.client.clone());
 		let req: CallRequestHelper = req.into();
