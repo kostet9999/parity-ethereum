@@ -624,9 +624,18 @@ fn execute_read_only_tx(gas_known: bool, params: ExecuteParams) -> impl Future<I
 			execute_read_only_tx(true, params.clone()).and_then(move |res| {
 				match res {
 					Ok(executed) => {
-						// `OutOfGas` exception can't occur here because of virtual execution context
-						if let Some(ref exception) = executed.exception {
-							trace!(target: "light_fetch", "Execution exception: {}", exception);
+						// `OutOfGas` exception can only occur on full-nodes that run `Parity-Ethereum v2.1.1` or older
+						// Because the execution is executed as `virtual` from v2.1.2 or later
+						if let Some(vm::Error::OutOfGas) = executed.exception {
+							let old_gas = params.tx.gas;
+							params.tx.gas = params.tx.gas * 2u32;
+							if params.tx.gas > params.hdr.gas_limit() {
+								trace!(target: "light_fetch", "OutOutGas exception received, gas increase = failed");
+								params.tx.gas = old_gas;
+							} else {
+								trace!(target: "light_fetch", "OutOutGas exception received, gas increase = success");
+								return Ok(future::Loop::Continue(params))
+							}
 						}
 						Ok(future::Loop::Break(Ok(executed)))
 					}
