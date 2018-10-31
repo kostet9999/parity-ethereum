@@ -563,21 +563,25 @@ usage! {
 			"Specify CORS header for IPFS API responses. Special options: \"all\", \"none\".",
 
 		["Light Client Options"]
-			ARG arg_on_demand_time_window: (Option<u64>) = None, or |c: &Config| c.light.as_ref()?.on_demand_time_window,
+			ARG arg_on_demand_response_time_window: (Option<u64>) = None, or |c: &Config| c.light.as_ref()?.on_demand_response_time_window,
+			"--on-demand-response-time-window=[MS]",
+			"Specify the maximum time to wait for a successful response",
+
+			ARG arg_on_demand_request_time_window: (Option<u64>) = None, or |c: &Config| c.light.as_ref()?.on_demand_request_time_window,
 			"--on-demand-time-window=[MS]",
-			"Specify the time window",
+			"Specify the maximum inital time to wait for a successful request (it will backoff exponentially according to the request options",
 
-			ARG arg_on_demand_start_backoff: (Option<u64>) = None, or |c: &Config| c.light.as_ref()?.on_demand_start_backoff,
+			ARG arg_on_demand_request_backoff_start: (Option<u64>) = None, or |c: &Config| c.light.as_ref()?.on_demand_request_backoff_start,
 			"--on-demand-start-backoff=[MS]",
-			"Specify light client start backoff time",
+			"Specify light client initial backoff time for a request",
 
-			ARG arg_on_demand_end_backoff: (Option<u64>) = None, or |c: &Config| c.light.as_ref()?.on_demand_end_backoff,
+			ARG arg_on_demand_request_backoff_max: (Option<u64>) = None, or |c: &Config| c.light.as_ref()?.on_demand_request_backoff_max,
 			"--on-demand-end-backoff=[MS]",
-			"Specify light client end backoff time",
+			"Specify light client maximum backoff time for a request",
 
-			ARG arg_on_demand_max_backoff_rounds: (Option<usize>) = None, or |c: &Config| c.light.as_ref()?.on_demand_max_backoff_rounds,
+			ARG arg_on_demand_request_backoff_rounds_max: (Option<usize>) = None, or |c: &Config| c.light.as_ref()?.on_demand_request_backoff_rounds_max,
 			"--on-demand-max-backoff-rounds=[TIMES]",
-			"Specify light client maximum number of backoff iterations",
+			"Specify light client maximum number of backoff iterations for a request",
 
 		["Secret Store Options"]
 			FLAG flag_no_secretstore: (bool) = false, or |c: &Config| c.secretstore.as_ref()?.disable.clone(),
@@ -1395,10 +1399,11 @@ struct Whisper {
 #[derive(Default, Debug, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Light {
-	on_demand_time_window: Option<u64>,
-	on_demand_start_backoff: Option<u64>,
-	on_demand_end_backoff: Option<u64>,
-	on_demand_max_backoff_rounds: Option<usize>,
+	on_demand_response_time_window: Option<u64>,
+	on_demand_request_time_window: Option<u64>,
+	on_demand_request_backoff_start: Option<u64>,
+	on_demand_request_backoff_max: Option<u64>,
+	on_demand_request_backoff_rounds_max: Option<usize>
 }
 
 #[cfg(test)]
@@ -1812,10 +1817,11 @@ mod tests {
 			arg_snapshot_threads: None,
 
 			// -- Light options.
-			arg_on_demand_time_window: Some(1000),
-			arg_on_demand_start_backoff: Some(100),
-			arg_on_demand_end_backoff: Some(9000),
-			arg_on_demand_max_backoff_rounds: Some(100),
+			arg_on_demand_response_time_window: Some(2000),
+			arg_on_demand_request_time_window: Some(3000),
+			arg_on_demand_request_backoff_start: Some(9000),
+			arg_on_demand_request_backoff_max: Some(15000),
+			arg_on_demand_request_backoff_rounds_max: Some(10),
 
 			// -- Whisper options.
 			flag_whisper: false,
@@ -2066,10 +2072,11 @@ mod tests {
 				num_verifiers: None,
 			}),
 			light: Some(Light {
-				on_demand_time_window: Some(1000),
-				on_demand_start_backoff: Some(100),
-				on_demand_end_backoff: Some(10000),
-				on_demand_max_backoff_rounds: Some(10),
+				on_demand_response_time_window: Some(2000),
+				on_demand_request_time_window: Some(3000),
+				on_demand_request_backoff_start: Some(9000),
+				on_demand_request_backoff_max: Some(15000),
+				on_demand_request_backoff_rounds_max: Some(10),
 			}),
 			snapshots: Some(Snapshots {
 				disable_periodic: Some(true),
